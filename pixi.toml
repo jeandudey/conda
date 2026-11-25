@@ -8,3 +8,4 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
+rattler-build = ">=0.81.0,<0.82"
