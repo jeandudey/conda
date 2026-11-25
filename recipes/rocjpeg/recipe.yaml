@@ -87,3 +87,20 @@ outputs:
     tests:
       - script:
           - test -f $PREFIX/include/rocjpeg/rocjpeg.h
+
+about:
+  homepage: https://rocm.docs.amd.com/projects/rocJPEG
+  summary: ROCm JPEG decoding library
+  description: |
+    rocJPEG is a software library for decoding JPEG images using media
+    engines that provide fully accelerated, hardware-based JPEG decoding.
+    It is part of AMD's software ecosystem based on ROCm. The rocJPEG library
+    can be used with AMD GPUs.
+  license: MIT
+  license_file: LICENSE
+  documentation: https://rocm.docs.amd.com/projects/rocJPEG/en/latest/
+  repository: https://github.com/ROCm/rocJPEG
+
+extra:
+  recipe-maintainers:
+    - jeandudey
