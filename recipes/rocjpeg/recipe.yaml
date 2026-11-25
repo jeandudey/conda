@@ -1,0 +1,89 @@
+schema_version: 1
+
+context:
+  name: rocjpeg
+  version: "7.2.4"
+
+recipe:
+  name: rocjpeg-split
+  version: ${{ version }}
+
+source:
+  url: https://github.com/ROCm/rocJPEG/archive/refs/tags/rocm-${{ version }}.tar.gz
+  sha256: be739859bcbb0d678b22af4b4bee4aad37cbee8c838198bbe71b49cf43640ccf
+
+build:
+  number: 0
+  skip:
+    - not linux
+    - hip_compiler_version in (None, "None")
+
+outputs:
+  - staging:
+      name: rocjpeg-build
+    requirements:
+      build:
+        - ${{ compiler('clang') }}
+        - ${{ stdlib('c') }}
+        - ${{ compiler('clangxx') }}
+        - ${{ compiler('hip') }}
+        - cmake
+        - ninja
+      host:
+        - libva
+        - libdrm
+    build:
+      script: build.sh
+
+  - package:
+      name: librocjpeg
+    inherit: rocjpeg-build
+    requirements:
+      build:
+        - ${{ stdlib('c') }}
+    build:
+      files:
+        include:
+          - "**/*"
+        exclude:
+          - include/**
+          - lib/cmake/**
+          - share/doc/**
+    tests:
+      - package_contents:
+          lib:
+            - rocjpeg
+
+  - package:
+      name: librocjpeg-devel
+    inherit: rocjpeg-build
+    requirements:
+      run:
+        - ${{ pin_subpackage('librocjpeg', exact=True) }}
+      run_exports:
+        - ${{ pin_subpackage('librocjpeg', upper_bound='x.x') }}
+    build:
+      files:
+        include:
+          - include/**
+          - lib/cmake/**
+          - share/doc/**
+    tests:
+      - requirements:
+          run:
+            - cmake-package-check
+            - ${{ compiler('clang') }}
+            - ${{ compiler('clangxx') }}
+        script:
+          - cmake-package-check rocjpeg
+      - package_contents:
+          include:
+            - rocjpeg/rocjpeg.h
+  - package:
+      name: rocjpeg
+    requirements:
+      run:
+        - ${{ pin_subpackage('librocjpeg-devel', exact=True) }}
+    tests:
+      - script:
+          - test -f $PREFIX/include/rocjpeg/rocjpeg.h

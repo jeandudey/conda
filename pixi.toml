@@ -5,7 +5,16 @@ name = "recipes"
 platforms = ['linux-64']
 version = "0.1.0"
 
+[activation.env]
+RATTLER_BUILD_ARGS = "-m $CONDA_PREFIX/conda_build_config.yaml --error-unused-staging-files"
+
 [tasks]
+build-rocjpeg = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/rocjpeg", outputs = [
+    "output/linux-64/rocjpeg-*.conda",
+    "output/linux-64/librocjpeg-devel-*.conda",
+    "output/linux-64/librocjpeg-*.conda",
+] }
 
 [dependencies]
+conda-forge-pinning = "*"
 rattler-build = ">=0.81.0,<0.82"

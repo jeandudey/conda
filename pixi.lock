@@ -20,6 +20,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/patchelf-0.19.3-hee9eb32_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rattler-build-0.81.0-hf01adef_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.11.20-hbd8a1cb_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/conda-forge-pinning-2026.11.25.10.26.24-hd8ed1ab_1.conda
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   build_number: 20
@@ -127,3 +128,11 @@ packages:
   run_exports: {}
   size: 123617
   timestamp: 1795239311426
+- conda: https://conda.anaconda.org/conda-forge/noarch/conda-forge-pinning-2026.11.25.10.26.24-hd8ed1ab_1.conda
+  sha256: ba027f74de4324fa139acb6611fa45d39055d76df3efe6120d608fddd3baa25b
+  md5: 34016b0447ac6e20b7285c88b723a916
+  license: BSD-3-Clause
+  license_family: BSD
+  run_exports: {}
+  size: 71323
+  timestamp: 1795602390505
