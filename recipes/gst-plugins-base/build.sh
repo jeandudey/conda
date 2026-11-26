@@ -8,6 +8,8 @@ meson setup builddir \
   --wrap-mode=nofallback \
   -Dintrospection=enabled \
   -Dgl=enabled \
+  -Dgl_platform=egl,glx \
+  -Dgl_winsys=x11,wayland,egl,surfaceless \
   -Dexamples=disabled \
   -Dtests=disabled \
 

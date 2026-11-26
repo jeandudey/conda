@@ -12,7 +12,7 @@ source:
   rev: 1cb8d4562d64d32dfe96fc79d59bd6dde10a8940
 
 build:
-  number: 0
+  number: 1
   script: build.sh
   dynamic_linking:
     missing_dso_allowlist:
@@ -31,6 +31,7 @@ requirements:
     - pkgconf
     - python 3.14.* *_cp314
     - setuptools
+    - wayland
   host:
     - alsa-lib
     - cairo
@@ -49,6 +50,8 @@ requirements:
     - libxcb
     - pango
     - python 3.14.* *_cp314
+    - wayland
+    - wayland-protocols
     - xorg-libx11
     - xorg-libxau
     - xorg-libxdamage
@@ -71,6 +74,10 @@ tests:
   - script:
       - test -f $PREFIX/lib/libgstvideo-1.0.so
       - test -f $PREFIX/lib/girepository-1.0/GstVideo-1.0.typelib
+      - test -f $PREFIX/lib/girepository-1.0/GstGLWayland-1.0.typelib
+      - test -f $PREFIX/lib/pkgconfig/gstreamer-gl-wayland-1.0.pc
+      - grep -E '^gl_winsys=.*wayland' $PREFIX/lib/pkgconfig/gstreamer-gl-1.0.pc
+      - grep -E '^gl_platforms=.*egl' $PREFIX/lib/pkgconfig/gstreamer-gl-1.0.pc
       - gst-inspect-1.0 --plugin volume
       - gst-inspect-1.0 --plugin pango
 
