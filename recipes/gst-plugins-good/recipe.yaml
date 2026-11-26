@@ -1,0 +1,94 @@
+schema_version: 1
+
+context:
+  version: "1.29.2.1"
+
+package:
+  name: gst-plugins-good
+  version: ${{ version }}
+
+source:
+  git: https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+  rev: 1cb8d4562d64d32dfe96fc79d59bd6dde10a8940
+
+build:
+  number: 0
+  script: build.sh
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+    - gettext-tools
+    - meson
+    - ninja
+    - pkgconf
+  host:
+    - bzip2
+    - glib
+    - gstreamer ==${{ version }}
+    - gst-plugins-base ==${{ version }}
+    - jack
+    - lame
+    - libflac
+    - libjpeg-turbo
+    - libpng
+    - libvpx
+    - libxml2-devel
+    - mpg123
+    - openssl
+    - pulseaudio-client
+    - xorg-libx11
+    - xorg-libxdamage
+    - xorg-libxext
+    - xorg-libxfixes
+    - xorg-libxtst
+    - xorg-xorgproto
+    - zlib
+  run:
+    # Loaded with dlopen by the soup and adaptivedemux2 plugins.
+    - libsoup >=3,<4
+    # Provides TLS support to libsoup.
+    - glib-networking
+  run_exports:
+    - ${{ pin_subpackage('gst-plugins-good', upper_bound='x.x') }}
+
+tests:
+  - package_contents:
+      files:
+        - lib/gstreamer-1.0/libgstadaptivedemux2.so
+        - lib/gstreamer-1.0/libgstflac.so
+        - lib/gstreamer-1.0/libgstjack.so
+        - lib/gstreamer-1.0/libgstjpeg.so
+        - lib/gstreamer-1.0/libgstlame.so
+        - lib/gstreamer-1.0/libgstmatroska.so
+        - lib/gstreamer-1.0/libgstmpg123.so
+        - lib/gstreamer-1.0/libgstpng.so
+        - lib/gstreamer-1.0/libgstpulseaudio.so
+        - lib/gstreamer-1.0/libgstsoup.so
+        - lib/gstreamer-1.0/libgstvideo4linux2.so
+        - lib/gstreamer-1.0/libgstvpx.so
+        - lib/gstreamer-1.0/libgstximagesrc.so
+  - script:
+      - gst-inspect-1.0 flacenc
+      - gst-inspect-1.0 hlsdemux2
+      - gst-inspect-1.0 jackaudiosink
+      - gst-inspect-1.0 jpegdec
+      - gst-inspect-1.0 jpegenc
+      - gst-inspect-1.0 lamemp3enc
+      - gst-inspect-1.0 matroskademux
+      - gst-inspect-1.0 mpg123audiodec
+      - gst-inspect-1.0 pngenc
+      - gst-inspect-1.0 pulsesink
+      - gst-inspect-1.0 souphttpsrc
+      - gst-inspect-1.0 v4l2src
+      - gst-inspect-1.0 v4l2sink
+      - gst-inspect-1.0 vp8enc
+      - gst-inspect-1.0 ximagesrc
+
+about:
+  summary: GStreamer Good Plug-ins
+  license: LGPL-2.0-or-later
+  license_file: subprojects/gst-plugins-good/COPYING
+  homepage: https://gstreamer.freedesktop.org/
+  repository: https://gitlab.freedesktop.org/gstreamer/gstreamer

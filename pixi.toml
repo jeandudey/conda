@@ -24,6 +24,14 @@ build-gst-plugins-base = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --reci
 ], depends-on = [
     "build-gstreamer",
 ] }
+build-gst-plugins-good = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gst-plugins-good", inputs = [
+    "recipes/gst-plugins-good/**",
+], outputs = [
+    "output/linux-64/gst-plugins-good-*.conda",
+], depends-on = [
+    "build-gst-plugins-base",
+    "build-gstreamer",
+] }
 build-gst-plugins-rs = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gst-plugins-rs", inputs = [
     "recipes/gst-plugins-rs/**",
 ], outputs = [
