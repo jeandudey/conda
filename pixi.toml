@@ -26,6 +26,9 @@ build-rocjpeg = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./
     "output/linux-64/librocjpeg-*.conda",
 ] }
 
+publish-gstreamer = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gstreamer-*.conda", depends-on = [
+    "build-gstreamer",
+] }
 publish-rocjpeg = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/rocjpeg-*.conda output/linux-64/librocjpeg-*.conda", depends-on = [
     "build-rocjpeg",
 ] }
