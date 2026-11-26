@@ -77,6 +77,9 @@ publish-gstreamer = { cmd = "rattler-build upload prefix --channel jeandudey/con
 publish-pipewire = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/pipewire-*.conda output/linux-64/pipewire-*.conda", depends-on = [
     "build-pipewire",
 ] }
+publish-gst-plugin-pipewire = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugin-pipewire-*.conda output/linux-64/gst-plugin-pipewire-*.conda", depends-on = [
+    "build-pipewire",
+] }
 publish-rocjpeg = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/rocjpeg-*.conda output/linux-64/librocjpeg-*.conda", depends-on = [
     "build-rocjpeg",
 ] }
