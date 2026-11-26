@@ -1,0 +1,61 @@
+schema_version: 1
+
+context:
+  version: "0.15.4"
+
+package:
+  name: gst-plugins-rs
+  version: ${{ version }}
+
+source:
+  git: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs
+  rev: "${{ version }}"
+
+build:
+  number: 0
+  script: build.sh
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - ${{ compiler('rust') }}
+    - cargo-c
+    - meson
+    - ninja
+  host:
+    - cairo
+    - expat
+    - glib
+    - gst-plugins-bad
+    - gst-plugins-base
+    - gstreamer
+    - gtk4
+    - libdrm
+    - libegl-devel
+    - libgl-devel
+    - libgraphene
+    - libwebp-base
+    - libxcb
+    - pango
+    - xorg-libx11
+    - xorg-xorgproto
+    - zlib
+  ignore_run_exports:
+    from_package:
+      - expat
+      - libdrm
+      - libegl-devel
+      - libgl-devel
+      - libxcb
+      - xorg-libx11
+      - zlib
+  run:
+    - ${{ pin_compatible('libgraphene', upper_bound='x') }}
+
+tests:
+  - package_contents:
+      files:
+        - lib/gstreamer-1.0/libgstgtk4.so
+  - script:
+      - gst-inspect-1.0 gtk4paintablesink

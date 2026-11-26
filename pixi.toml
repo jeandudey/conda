@@ -24,6 +24,14 @@ build-gst-plugins-base = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --reci
 ], depends-on = [
     "build-gstreamer",
 ] }
+build-gst-plugins-rs = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gst-plugins-rs", inputs = [
+    "recipes/gst-plugins-rs/**",
+], outputs = [
+], depends-on = [
+    "build-gst-plugins-bad",
+    "build-gst-plugins-base",
+    "build-gstreamer",
+] }
 build-gstreamer = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gstreamer", inputs = [
     "recipes/gstreamer/**",
 ], outputs = [
@@ -48,6 +56,9 @@ publish-gst-plugins-bad = { cmd = "rattler-build upload prefix --channel jeandud
 ] }
 publish-gst-plugins-base = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-base-*.conda", depends-on = [
     "build-gst-plugins-base",
+] }
+publish-gst-plugins-rs = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-rs-*.conda", depends-on = [
+    "build-gst-plugins-rs",
 ] }
 publish-gstreamer = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gstreamer-*.conda", depends-on = [
     "build-gstreamer",
