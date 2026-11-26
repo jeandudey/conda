@@ -65,11 +65,17 @@ publish-gst-plugins-bad = { cmd = "rattler-build upload prefix --channel jeandud
 publish-gst-plugins-base = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-base-*.conda", depends-on = [
     "build-gst-plugins-base",
 ] }
+publish-gst-plugins-good = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-good-*.conda", depends-on = [
+    "build-gst-plugins-good",
+] }
 publish-gst-plugins-rs = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-rs-*.conda", depends-on = [
     "build-gst-plugins-rs",
 ] }
 publish-gstreamer = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gstreamer-*.conda", depends-on = [
     "build-gstreamer",
+] }
+publish-pipewire = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/pipewire-*.conda output/linux-64/pipewire-*.conda", depends-on = [
+    "build-pipewire",
 ] }
 publish-rocjpeg = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/rocjpeg-*.conda output/linux-64/librocjpeg-*.conda", depends-on = [
     "build-rocjpeg",
