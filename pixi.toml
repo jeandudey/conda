@@ -9,6 +9,11 @@ version = "0.1.0"
 RATTLER_BUILD_ARGS = "-m $CONDA_PREFIX/conda_build_config.yaml --error-unused-staging-files"
 
 [tasks]
+build-gstreamer = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gstreamer", inputs = [
+    "recipes/gstreamer/**",
+], outputs = [
+    "output/linux-64/gstreamer-*.conda",
+] }
 build-pipewire = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/pipewire", inputs = [
     "recipes/pipewire/**",
 ], outputs = [

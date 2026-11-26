@@ -1,0 +1,59 @@
+schema_version: 1
+
+context:
+  # Development version of the monorepo at the rev below (meson project version)
+  version: "1.29.2.1"
+
+package:
+  name: gstreamer
+  version: ${{ version }}
+
+source:
+  git: https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+  rev: 1cb8d4562d64d32dfe96fc79d59bd6dde10a8940
+
+build:
+  number: 0
+  script: build.sh
+  dynamic_linking:
+    missing_dso_allowlist:
+      - lib/libgst*-1.0.so.0
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - ${{ stdlib('c') }}
+    - bison
+    - flex
+    - gettext-tools
+    - gobject-introspection
+    - meson
+    - ninja
+    - pkgconf
+    - python 3.14.* *_cp314
+    - setuptools
+  host:
+    - glib
+    - gobject-introspection
+    - python 3.14.* *_cp314
+    - zlib
+  ignore_run_exports:
+    from_package:
+      - python
+      - zlib
+  run_exports:
+    - ${{ pin_subpackage('gstreamer', upper_bound='x.x') }}
+
+tests:
+  - script:
+      - gst-inspect-1.0 --version
+      - gst-launch-1.0 --version
+      - test -f $PREFIX/lib/girepository-1.0/Gst-1.0.typelib
+
+about:
+  summary: Library for constructing graphs of media-handling components
+  license: LGPL-2.0-or-later
+  license_file: subprojects/gstreamer/COPYING
+  homepage: https://gstreamer.freedesktop.org/
+  repository: https://gitlab.freedesktop.org/gstreamer/gstreamer
