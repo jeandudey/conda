@@ -12,7 +12,7 @@ RATTLER_BUILD_ARGS = "-m $CONDA_PREFIX/conda_build_config.yaml -m channels.yaml 
 build-gst-plugins-base = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gst-plugins-base", inputs = [
     "recipes/gst-plugins-base/**",
 ], outputs = [
-    "output/linux-64/gst-plugin-base-*.conda",
+    "output/linux-64/gst-plugins-base-*.conda",
 ], depends-on = [
     "build-gstreamer",
 ] }
@@ -35,7 +35,7 @@ build-rocjpeg = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./
     "output/linux-64/librocjpeg-*.conda",
 ] }
 
-publish-gst-plugins-base = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugin-base-*.conda", depends-on = [
+publish-gst-plugins-base = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-base-*.conda", depends-on = [
     "build-gst-plugins-base",
 ] }
 publish-gstreamer = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gstreamer-*.conda", depends-on = [
