@@ -9,13 +9,21 @@ version = "0.1.0"
 RATTLER_BUILD_ARGS = "-m $CONDA_PREFIX/conda_build_config.yaml --error-unused-staging-files"
 
 [tasks]
+build-pipewire = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/pipewire", inputs = [
+    "recipes/pipewire/**",
+], outputs = [
+    "output/linux-64/gst-plugin-pipewire-*.conda",
+    "output/linux-64/pipewire-*.conda",
+] }
 build-rocjpeg = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/rocjpeg", outputs = [
     "output/linux-64/rocjpeg-*.conda",
     "output/linux-64/librocjpeg-devel-*.conda",
     "output/linux-64/librocjpeg-*.conda",
 ] }
 
-publish-rocjpeg = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/rocjpeg-*.conda output/linux-64/librocjpeg-*.conda", depends-on = ["build-rocjpeg"] }
+publish-rocjpeg = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/rocjpeg-*.conda output/linux-64/librocjpeg-*.conda", depends-on = [
+    "build-rocjpeg",
+] }
 
 [dependencies]
 conda-forge-pinning = "*"

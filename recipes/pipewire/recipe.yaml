@@ -1,0 +1,119 @@
+schema_version: 1
+
+context:
+  version: "1.6.11"
+
+recipe:
+  name: pipewire-split
+  version: ${{ version }}
+
+source:
+  url: https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/${{ version }}/pipewire-${{ version }}.tar.gz
+  sha256: f3f70c4af173cc93d05070a9d412efe3ef5889bdf4ac32298e2c0d9ae1350559
+
+build:
+  number: 1
+  skip:
+    - not linux
+  script: build.sh
+
+outputs:
+  - staging:
+      name: pipewire-build
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ compiler('cxx') }}
+        - ${{ stdlib('c') }}
+        - meson
+        - ninja
+        - pkgconf
+        # i18n.gettext() in po/meson.build needs msgfmt to compile translations.
+        - gettext
+      host:
+        # The spa-support dbus plugin and several modules link libdbus-1.
+        - dbus
+        # pw-top links libncursesw and libtinfow.
+        - ncurses
+        # Only needed by the GStreamer plugin.
+        - glib
+        - gstreamer
+        - gst-plugins-base
+        # Not linked, but pkg-config needs zlib.pc to resolve gio-2.0.
+        - zlib
+
+  # The outputs do not inherit the staging run_exports: each one lists in host
+  # only what its own files link against.
+  - package:
+      name: pipewire
+    inherit:
+      from: pipewire-build
+      run_exports: false
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ stdlib('c') }}
+      host:
+        - dbus
+        - ncurses
+      run_exports:
+          # Installs libpipewire-0.3.so.0 (soversion 0). The "0.3" ABI marker in the
+          # library name is kept stable across the whole 1.x series -- only additive
+          # changes -- so a consumer built against 1.6.x keeps working with later
+          # 1.x. Bound at the next major to be safe.
+          - ${{ pin_subpackage('pipewire', upper_bound='x') }}
+    build:
+      files:
+        include:
+          - "**/*"
+        exclude:
+          - "lib/gstreamer-1.0/*"
+    tests:
+      - package_contents:
+          lib:
+            - pipewire-0.3
+      - script:
+          - pkg-config --modversion libpipewire-0.3
+          - pkg-config --modversion libspa-0.2
+        requirements:
+          run:
+            - pkg-config
+
+  - package:
+      name: gst-plugin-pipewire
+    inherit:
+      from: pipewire-build
+      run_exports: false
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ stdlib('c') }}
+      host:
+        # Also needed so the link check can attribute libpipewire-0.3.so.0.
+        - ${{ pin_subpackage('pipewire', exact=True) }}
+        - glib
+        - gstreamer
+        - gst-plugins-base
+      run:
+        - ${{ pin_subpackage('pipewire', exact=True) }}
+    build:
+      files:
+        include:
+          - "lib/gstreamer-1.0/*"
+
+
+about:
+  homepage: https://pipewire.org
+  license: MIT
+  license_file: COPYING
+  summary: Server and user space API to deal with multimedia pipelines
+  description: |
+    PipeWire is a server and user space API to deal with multimedia pipelines.
+    It provides a low-latency, graph-based processing engine on top of audio
+    and video devices that can be used to support the use cases currently
+    handled by both PulseAudio and JACK.
+  repository: https://gitlab.freedesktop.org/pipewire/pipewire
+
+extra:
+  recipe-maintainers:
+    - jeandudey
