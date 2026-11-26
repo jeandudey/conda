@@ -9,6 +9,14 @@ version = "0.1.0"
 RATTLER_BUILD_ARGS = "-m $CONDA_PREFIX/conda_build_config.yaml -m channels.yaml --error-unused-staging-files"
 
 [tasks]
+build-gst-plugins-bad = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gst-plugins-bad", inputs = [
+    "recipes/gst-plugins-bad/**",
+], outputs = [
+    "output/linux-64/gst-plugins-bad-*.conda",
+], depends-on = [
+    "build-gst-plugins-bad",
+    "build-gstreamer",
+] }
 build-gst-plugins-base = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./recipes/gst-plugins-base", inputs = [
     "recipes/gst-plugins-base/**",
 ], outputs = [
@@ -35,6 +43,9 @@ build-rocjpeg = { cmd = "rattler-build build $RATTLER_BUILD_ARGS --recipe-dir ./
     "output/linux-64/librocjpeg-*.conda",
 ] }
 
+publish-gst-plugins-bad = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-bad-*.conda", depends-on = [
+    "build-gst-plugins-bad",
+] }
 publish-gst-plugins-base = { cmd = "rattler-build upload prefix --channel jeandudey/conda --skip-existing output/linux-64/gst-plugins-base-*.conda", depends-on = [
     "build-gst-plugins-base",
 ] }

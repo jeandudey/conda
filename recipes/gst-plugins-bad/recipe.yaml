@@ -1,0 +1,99 @@
+schema_version: 1
+
+context:
+  name: gst-plugins-bad
+  version: "1.29.2.1"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  git: https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+  rev: 1cb8d4562d64d32dfe96fc79d59bd6dde10a8940
+  patches:
+    # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/3022
+    - 0001-disable_d3d11_in_nvcodec.patch
+    # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/5474
+    - 0002-add_onnxinference_intra_op_threads.patch
+    - 0003-hipconvertscale_crop_meta.patch
+
+build:
+  number: 0
+  script: build.sh
+  dynamic_linking:
+    missing_dso_allowlist:
+      - lib/libgst*-1.0.so.0
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+    - ${{ compiler('cxx') }}
+    - gettext-tools
+    - gobject-introspection
+    - gst-plugins-base ==${{ version }}
+    - pkgconf
+    - perl
+    - libtool
+    - meson
+    - ninja
+    - setuptools
+  host:
+    - bzip2
+    - glib
+    - gobject-introspection
+    - gstreamer ==${{ version }}
+    - gst-plugins-base ==${{ version }}
+    - libdrm
+    - libgl-devel
+    - libegl-devel
+    - libopus
+    - libsndfile
+    - libxcb
+    - libxml2-devel
+    - openssl
+    - pthread-stubs
+    - xorg-xorgproto
+    - xorg-libx11
+    - xorg-libxau
+    - xorg-libxdamage
+    - xorg-libxext
+    - xorg-libxfixes
+    - xorg-libxrender
+    - xorg-libxxf86vm
+    - zlib
+    - expat
+    - onnxruntime-cpp >=1.32.0
+  ignore_run_exports:
+    from_package:
+      - expat
+      - libegl-devel
+      - libgl-devel
+      - libxcb
+      - xorg-libxau
+      - xorg-libxdamage
+      - xorg-libxext
+      - xorg-libxfixes
+      - xorg-libxrender
+      - xorg-libxxf86vm
+      - zlib
+  run_exports:
+    - ${{ pin_subpackage('gst-plugins-bad', upper_bound='x.x') }}
+
+tests:
+  - package_contents:
+      files:
+        - lib/gstreamer-1.0/libgstonnx.so
+        - lib/gstreamer-1.0/libgsthip.so
+        - lib/gstreamer-1.0/libgstnvcodec.so
+  - script:
+      - gst-inspect-1.0 onnxinference
+      - gst-inspect-1.0 --plugin audiovisualizers
+
+about:
+  homepage: https://gstreamer.freedesktop.org/
+  repository: https://gitlab.freedesktop.org/gstreamer/gstreamer/-/tree/main/subprojects/gst-plugins-bad
+  license: LGPL-2.1-or-later
+  license_file: subprojects/gst-plugins-bad/COPYING
+  summary: GStreamer Bad Plug-ins with the ONNX plugin enabled

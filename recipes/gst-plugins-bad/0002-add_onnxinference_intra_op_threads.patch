@@ -1,0 +1,147 @@
+From 7e0f7af43e4cb1ea4593dda6a1e075b3443b5a97 Mon Sep 17 00:00:00 2001
+From: Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+Date: Wed, 25 Nov 2026 18:03:21 +0100
+Subject: [PATCH] onnxinference: Add intra-op-threads property
+
+Each element creates its own ONNX Runtime session with its own intra-op
+thread pool, sized for the whole CPU by default. With two elements in one
+pipeline the pools compete with each other and the pipeline slows down.
+
+Add an intra-op-threads property to the base class, passed to
+SetIntraOpNumThreads, so applications can size each pool. The default of
+zero keeps the current behavior.
+
+With a palm detection and a hand landmark model from ml-models in the
+same pipeline, using the CPU execution provider on a 16 core, 32 thread
+machine, 200 frames took 7.9 s of real time and 248 s of CPU time by
+default, against 1.6 s and 11 s with 4 threads per element.
+---
+ .../docs/plugins/gst_plugins_cache.json       | 14 +++++++
+ .../ext/onnx/gstonnxbaseinference.c           | 40 ++++++++++++++++++-
+ 2 files changed, 53 insertions(+), 1 deletion(-)
+
+diff --git a/subprojects/gst-plugins-bad/docs/plugins/gst_plugins_cache.json b/subprojects/gst-plugins-bad/docs/plugins/gst_plugins_cache.json
+index 336b64e32e..0a3257db6a 100644
+--- a/subprojects/gst-plugins-bad/docs/plugins/gst_plugins_cache.json
++++ b/subprojects/gst-plugins-bad/docs/plugins/gst_plugins_cache.json
+@@ -239503,6 +239503,20 @@
+                         "type": "GstOnnxExecutionProvider",
+                         "writable": true
+                     },
++                    "intra-op-threads": {
++                        "blurb": "Number of threads used to run a single operator (0 = ONNX Runtime default)",
++                        "conditionally-available": false,
++                        "construct": false,
++                        "construct-only": false,
++                        "controllable": false,
++                        "default": "0",
++                        "max": "2147483647",
++                        "min": "0",
++                        "mutable": "null",
++                        "readable": true,
++                        "type": "gint",
++                        "writable": true
++                    },
+                     "model-cache-dir": {
+                         "blurb": "Directory used by the execution provider to cache compiled models",
+                         "conditionally-available": false,
+diff --git a/subprojects/gst-plugins-bad/ext/onnx/gstonnxbaseinference.c b/subprojects/gst-plugins-bad/ext/onnx/gstonnxbaseinference.c
+index d874a0ed14..ee0ae6a7a5 100644
+--- a/subprojects/gst-plugins-bad/ext/onnx/gstonnxbaseinference.c
++++ b/subprojects/gst-plugins-bad/ext/onnx/gstonnxbaseinference.c
+@@ -87,11 +87,13 @@ enum
+   PROP_EXECUTION_PROVIDER,
+   PROP_DEVICE,
+   PROP_MODEL_CACHE_DIR,
+-  PROP_VITISAI_CONFIG_FILE
++  PROP_VITISAI_CONFIG_FILE,
++  PROP_INTRA_OP_THREADS
+ };
+ 
+ #define GST_ONNX_INFERENCE_DEFAULT_EXECUTION_PROVIDER GST_ONNX_EXECUTION_PROVIDER_CPU
+ #define GST_ONNX_INFERENCE_DEFAULT_OPTIMIZATION_LEVEL GST_ONNX_OPTIMIZATION_LEVEL_ENABLE_EXTENDED
++#define GST_ONNX_INFERENCE_DEFAULT_INTRA_OP_THREADS 0
+ 
+ #define GST_TYPE_ONNX_OPTIMIZATION_LEVEL (gst_onnx_optimization_level_get_type ())
+ static GType
+@@ -240,6 +242,7 @@ struct _GstOnnxBaseInferencePrivate
+   gchar *device;
+   gchar *model_cache_dir;
+   gchar *vitisai_config_file;
++  gint intra_op_threads;
+ 
+   GRecMutex context_lock;
+ 
+@@ -425,6 +428,24 @@ gst_onnx_base_inference_class_init (GstOnnxBaseInferenceClass * klass)
+           "means use the provider default.", NULL,
+           (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+ 
++  /**
++   * GstOnnxBaseInference:intra-op-threads
++   *
++   * Number of threads used to parallelize the execution of a single operator.
++   * Each element has its own thread pool, so this can be used to avoid
++   * oversubscribing the CPU when several elements run at the same time.
++   * When 0 (the default) the ONNX Runtime default is used.
++   *
++   * Since: 1.30
++   */
++  g_object_class_install_property (gobject_class, PROP_INTRA_OP_THREADS,
++      g_param_spec_int ("intra-op-threads",
++          "Intra-op threads",
++          "Number of threads used to run a single operator "
++          "(0 = ONNX Runtime default)", 0, G_MAXINT,
++          GST_ONNX_INFERENCE_DEFAULT_INTRA_OP_THREADS,
++          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
++
+   element_class->set_context =
+       GST_DEBUG_FUNCPTR (gst_onnx_base_inference_set_context);
+ 
+@@ -475,6 +496,7 @@ gst_onnx_base_inference_init (GstOnnxBaseInference * self)
+ 
+   self->execution_provider = GST_ONNX_INFERENCE_DEFAULT_EXECUTION_PROVIDER;
+   priv->optimization_level = GST_ONNX_INFERENCE_DEFAULT_OPTIMIZATION_LEVEL;
++  priv->intra_op_threads = GST_ONNX_INFERENCE_DEFAULT_INTRA_OP_THREADS;
+   priv->model_inputs = g_array_new (FALSE, TRUE, sizeof (GstOnnxModelInput));
+   g_array_set_clear_func (priv->model_inputs,
+       (GDestroyNotify) clear_model_input);
+@@ -553,6 +575,9 @@ gst_onnx_base_inference_set_property (GObject * object, guint prop_id,
+       g_free (priv->vitisai_config_file);
+       priv->vitisai_config_file = g_value_dup_string (value);
+       break;
++    case PROP_INTRA_OP_THREADS:
++      priv->intra_op_threads = g_value_get_int (value);
++      break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -585,6 +610,9 @@ gst_onnx_base_inference_get_property (GObject * object, guint prop_id,
+     case PROP_VITISAI_CONFIG_FILE:
+       g_value_set_string (value, priv->vitisai_config_file);
+       break;
++    case PROP_INTRA_OP_THREADS:
++      g_value_set_int (value, priv->intra_op_threads);
++      break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -1381,6 +1409,16 @@ gst_onnx_base_inference_start (GstBaseTransform * trans)
+     goto error;
+   }
+ 
++  if (priv->intra_op_threads > 0) {
++    status = self->api->SetIntraOpNumThreads (session_options,
++        priv->intra_op_threads);
++    if (status) {
++      GST_ERROR_OBJECT (self, "Failed to set intra-op threads: %s",
++          self->api->GetErrorMessage (status));
++      goto error;
++    }
++  }
++
+   /* Set execution provider */
+   switch (self->execution_provider) {
+     case GST_ONNX_EXECUTION_PROVIDER_CUDA:
+-- 
+2.53.0
+

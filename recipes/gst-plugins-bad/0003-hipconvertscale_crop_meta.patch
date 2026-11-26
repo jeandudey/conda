@@ -1,0 +1,302 @@
+diff --git a/subprojects/gst-plugins-bad/gst-libs/gst/hip/gsthipconverter.cpp b/subprojects/gst-plugins-bad/gst-libs/gst/hip/gsthipconverter.cpp
+index 47a2d18f8f..2b1d3b0bbb 100644
+--- a/subprojects/gst-plugins-bad/gst-libs/gst/hip/gsthipconverter.cpp
++++ b/subprojects/gst-plugins-bad/gst-libs/gst/hip/gsthipconverter.cpp
+@@ -608,6 +608,10 @@ struct ConstBuffer
+   float alpha;
+   int do_blend;
+   int do_convert;
++  float src_x;
++  float src_y;
++  float src_w;
++  float src_h;
+ };
+ 
+ #define COLOR_SPACE_IDENTITY "color_space_identity"
+@@ -714,6 +718,10 @@ struct TextureBuffer
+ enum
+ {
+   PROP_0,
++  PROP_SRC_X,
++  PROP_SRC_Y,
++  PROP_SRC_WIDTH,
++  PROP_SRC_HEIGHT,
+   PROP_DEST_X,
+   PROP_DEST_Y,
+   PROP_DEST_WIDTH,
+@@ -773,6 +781,10 @@ struct _GstHipConverterPrivate
+   gboolean update_const_buf = TRUE;
+ 
+   /* properties */
++  gint src_x = 0;
++  gint src_y = 0;
++  gint src_width = 0;
++  gint src_height = 0;
+   gint dest_x = 0;
+   gint dest_y = 0;
+   gint dest_width = 0;
+@@ -805,6 +817,20 @@ gst_hip_converter_class_init (GstHipConverterClass * klass)
+   object_class->set_property = gst_hip_converter_set_property;
+   object_class->get_property = gst_hip_converter_get_property;
+ 
++  g_object_class_install_property (object_class, PROP_SRC_X,
++      g_param_spec_int ("src-x", "Src-X",
++          "x position in the source frame", 0, G_MAXINT, 0, param_flags));
++  g_object_class_install_property (object_class, PROP_SRC_Y,
++      g_param_spec_int ("src-y", "Src-Y",
++          "y position in the source frame", 0, G_MAXINT, 0, param_flags));
++  g_object_class_install_property (object_class, PROP_SRC_WIDTH,
++      g_param_spec_int ("src-width", "Src-Width",
++          "Width in the source frame, 0 for the whole frame", 0, G_MAXINT, 0,
++          param_flags));
++  g_object_class_install_property (object_class, PROP_SRC_HEIGHT,
++      g_param_spec_int ("src-height", "Src-Height",
++          "Height in the source frame, 0 for the whole frame", 0, G_MAXINT, 0,
++          param_flags));
+   g_object_class_install_property (object_class, PROP_DEST_X,
+       g_param_spec_int ("dest-x", "Dest-X",
+           "x poisition in the destination frame", G_MININT, G_MAXINT, 0,
+@@ -901,6 +927,18 @@ gst_hip_converter_set_property (GObject * object, guint prop_id,
+ 
+   std::lock_guard < std::mutex > lk (priv->lock);
+   switch (prop_id) {
++    case PROP_SRC_X:
++      priv->src_x = g_value_get_int (value);
++      break;
++    case PROP_SRC_Y:
++      priv->src_y = g_value_get_int (value);
++      break;
++    case PROP_SRC_WIDTH:
++      priv->src_width = g_value_get_int (value);
++      break;
++    case PROP_SRC_HEIGHT:
++      priv->src_height = g_value_get_int (value);
++      break;
+     case PROP_DEST_X:
+     {
+       auto dest_x = g_value_get_int (value);
+@@ -999,6 +1037,18 @@ gst_hip_converter_get_property (GObject * object, guint prop_id,
+ 
+   std::lock_guard < std::mutex > lk (priv->lock);
+   switch (prop_id) {
++    case PROP_SRC_X:
++      g_value_set_int (value, priv->src_x);
++      break;
++    case PROP_SRC_Y:
++      g_value_set_int (value, priv->src_y);
++      break;
++    case PROP_SRC_WIDTH:
++      g_value_set_int (value, priv->src_width);
++      break;
++    case PROP_SRC_HEIGHT:
++      g_value_set_int (value, priv->src_height);
++      break;
+     case PROP_DEST_X:
+       g_value_set_int (value, priv->dest_x);
+       break;
+@@ -1493,6 +1543,10 @@ gst_hip_converter_setup (GstHipConverter * self)
+   priv->const_buf->video_direction = 0;
+   priv->const_buf->alpha = 1;
+   priv->const_buf->do_blend = 0;
++  priv->const_buf->src_x = 0;
++  priv->const_buf->src_y = 0;
++  priv->const_buf->src_w = 1;
++  priv->const_buf->src_h = 1;
+ 
+   if (!gst_hip_device_set_current (self->device)) {
+     GST_ERROR_OBJECT (self, "Couldn't set device");
+@@ -2075,6 +2129,25 @@ gst_hip_converter_convert_frame (GstHipConverter * converter,
+     }
+   }
+ 
++  /* Source rectangle in normalized texture coordinates, 0 size means the
++   * whole frame */
++  {
++    gint in_w = GST_VIDEO_FRAME_WIDTH (&in_frame);
++    gint in_h = GST_VIDEO_FRAME_HEIGHT (&in_frame);
++    gint src_x = MIN (priv->src_x, in_w - 1);
++    gint src_y = MIN (priv->src_y, in_h - 1);
++    gint src_w = priv->src_width > 0 ? priv->src_width : in_w;
++    gint src_h = priv->src_height > 0 ? priv->src_height : in_h;
++
++    src_w = MIN (src_w, in_w - src_x);
++    src_h = MIN (src_h, in_h - src_y);
++
++    priv->const_buf->src_x = (gfloat) src_x / in_w;
++    priv->const_buf->src_y = (gfloat) src_y / in_h;
++    priv->const_buf->src_w = (gfloat) src_w / in_w;
++    priv->const_buf->src_h = (gfloat) src_h / in_h;
++  }
++
+   width = GST_VIDEO_FRAME_WIDTH (&out_frame);
+   height = GST_VIDEO_FRAME_HEIGHT (&out_frame);
+ 
+diff --git a/subprojects/gst-plugins-bad/gst-libs/gst/hip/kernel/converter.cu b/subprojects/gst-plugins-bad/gst-libs/gst/hip/kernel/converter.cu
+index c1d64e8008..ef5e309d5d 100644
+--- a/subprojects/gst-plugins-bad/gst-libs/gst/hip/kernel/converter.cu
++++ b/subprojects/gst-plugins-bad/gst-libs/gst/hip/kernel/converter.cu
+@@ -56,6 +56,10 @@ struct ConstBuffer
+   float alpha;
+   int do_blend;
+   int do_convert;
++  float src_x;
++  float src_y;
++  float src_w;
++  float src_h;
+ };
+ 
+ __device__ inline float
+@@ -1847,6 +1851,8 @@ GstHipConverterMain (TextureObject_t tex0, TextureObject_t tex1,
+     if (y < 0.0f || y > 1.0f)
+       return;
+     float2 rotated = do_rotate (x, y, const_buf.video_direction);
++    rotated.x = const_buf.src_x + rotated.x * const_buf.src_w;
++    rotated.y = const_buf.src_y + rotated.y * const_buf.src_h;
+     float4 s = g_sampler.Execute (tex0, tex1, tex2, tex3, rotated.x, rotated.y);
+     float3 rgb = make_float3 (s.x, s.y, s.z);
+     float3 yuv;
+@@ -1898,6 +1904,10 @@ static const char ConverterMain_str[] =
+ "  float alpha;\n"
+ "  int do_blend;\n"
+ "  int do_convert;\n"
++"  float src_x;\n"
++"  float src_y;\n"
++"  float src_w;\n"
++"  float src_h;\n"
+ "};\n"
+ "\n"
+ "__device__ inline float\n"
+@@ -3689,6 +3699,8 @@ static const char ConverterMain_str[] =
+ "    if (y < 0.0f || y > 1.0f)\n"
+ "      return;\n"
+ "    float2 rotated = do_rotate (x, y, const_buf.video_direction);\n"
++"    rotated.x = const_buf.src_x + rotated.x * const_buf.src_w;\n"
++"    rotated.y = const_buf.src_y + rotated.y * const_buf.src_h;\n"
+ "    float4 s = g_sampler.Execute (tex0, tex1, tex2, tex3, rotated.x, rotated.y);\n"
+ "    float3 rgb = make_float3 (s.x, s.y, s.z);\n"
+ "    float3 yuv;\n"
+diff --git a/subprojects/gst-plugins-bad/sys/hip/gsthipconvertscale.cpp b/subprojects/gst-plugins-bad/sys/hip/gsthipconvertscale.cpp
+index b4eef10bb8..1ef22e813f 100644
+--- a/subprojects/gst-plugins-bad/sys/hip/gsthipconvertscale.cpp
++++ b/subprojects/gst-plugins-bad/sys/hip/gsthipconvertscale.cpp
+@@ -76,6 +76,7 @@ struct _GstHipBaseConvertPrivate
+ 
+   gint borders_h = 0;
+   gint borders_w = 0;
++  gboolean same_caps = FALSE;
+   gboolean add_borders = DEFAULT_ADD_BORDERS;
+ 
+   /* orientation */
+@@ -107,6 +108,8 @@ static gboolean gst_hip_base_convert_transform_meta (GstBaseTransform * trans,
+     GstBuffer * outbuf, GstMeta * meta, GstBuffer * inbuf);
+ static GstFlowReturn gst_hip_base_convert_transform (GstBaseTransform * trans,
+     GstBuffer * inbuf, GstBuffer * outbuf);
++static GstFlowReturn gst_hip_base_convert_generate_output (GstBaseTransform *
++    trans, GstBuffer ** buffer);
+ static gboolean gst_hip_base_convert_set_info (GstHipBaseFilter * filter,
+     GstCaps * incaps, GstVideoInfo * in_info, GstCaps * outcaps,
+     GstVideoInfo * out_info);
+@@ -145,6 +148,8 @@ gst_hip_base_convert_class_init (GstHipBaseConvertClass * klass)
+   trans_class->transform_meta =
+       GST_DEBUG_FUNCPTR (gst_hip_base_convert_transform_meta);
+   trans_class->transform = GST_DEBUG_FUNCPTR (gst_hip_base_convert_transform);
++  trans_class->generate_output =
++      GST_DEBUG_FUNCPTR (gst_hip_base_convert_generate_output);
+ 
+   filter_class->set_info = GST_DEBUG_FUNCPTR (gst_hip_base_convert_set_info);
+ 
+@@ -1380,28 +1385,27 @@ gst_hip_base_convert_set_info (GstHipBaseFilter * filter,
+     return FALSE;
+   }
+ 
+-  if (in_width == out_info->width && in_height == out_info->height
+-      && in_info->finfo == out_info->finfo && priv->borders_w == 0 &&
+-      priv->borders_h == 0 && !need_flip &&
+-      !needs_color_convert (in_info, out_info)) {
+-    gst_base_transform_set_passthrough (GST_BASE_TRANSFORM (self), TRUE);
+-  } else {
+-    gst_base_transform_set_passthrough (GST_BASE_TRANSFORM (self), FALSE);
+-
+-    priv->conv = gst_hip_converter_new (filter->device, in_info,
+-        out_info, nullptr);
+-    if (!priv->conv) {
+-      GST_ERROR_OBJECT (self, "Couldn't create converter");
+-      return FALSE;
+-    }
+-
+-    g_object_set (priv->conv, "dest-x", priv->borders_w / 2,
+-        "dest-y", priv->borders_h / 2,
+-        "dest-width", out_info->width - priv->borders_w,
+-        "dest-height", out_info->height - priv->borders_h,
+-        "fill-border", TRUE, "video-direction", active_method, nullptr);
++  /* Passthrough is decided per buffer in generate_output(), as a buffer with
++   * a crop meta still needs to be converted */
++  priv->same_caps = (in_width == out_info->width &&
++      in_height == out_info->height && in_info->finfo == out_info->finfo &&
++      priv->borders_w == 0 && priv->borders_h == 0 && !need_flip &&
++      !needs_color_convert (in_info, out_info));
++  gst_base_transform_set_passthrough (GST_BASE_TRANSFORM (self), FALSE);
++
++  priv->conv = gst_hip_converter_new (filter->device, in_info,
++      out_info, nullptr);
++  if (!priv->conv) {
++    GST_ERROR_OBJECT (self, "Couldn't create converter");
++    return FALSE;
+   }
+ 
++  g_object_set (priv->conv, "dest-x", priv->borders_w / 2,
++      "dest-y", priv->borders_h / 2,
++      "dest-width", out_info->width - priv->borders_w,
++      "dest-height", out_info->height - priv->borders_h,
++      "fill-border", TRUE, "video-direction", active_method, nullptr);
++
+   GST_DEBUG_OBJECT (self, "%s from=%dx%d (par=%d/%d dar=%d/%d), size %"
+       G_GSIZE_FORMAT " -> %s to=%dx%d (par=%d/%d dar=%d/%d borders=%d:%d), "
+       "size %" G_GSIZE_FORMAT,
+@@ -1499,6 +1503,18 @@ gst_hip_base_convert_transform (GstBaseTransform * trans, GstBuffer * inbuf,
+   if (!gst_hip_fence_data_pool_acquire (priv->fence_data_pool, &fence_data))
+     return GST_FLOW_ERROR;
+ 
++  /* Convert only the region selected by the crop meta, if any. A zero size
++   * selects the whole frame */
++  auto crop_meta = gst_buffer_get_video_crop_meta (inbuf);
++  if (crop_meta) {
++    g_object_set (priv->conv, "src-x", crop_meta->x, "src-y", crop_meta->y,
++        "src-width", crop_meta->width, "src-height", crop_meta->height,
++        nullptr);
++  } else {
++    g_object_set (priv->conv, "src-x", 0, "src-y", 0, "src-width", 0,
++        "src-height", 0, nullptr);
++  }
++
+   auto ret = gst_hip_converter_convert_frame (priv->conv, inbuf, outbuf,
+       fence_data, stream);
+   if (!ret) {
+@@ -1525,6 +1541,27 @@ gst_hip_base_convert_transform (GstBaseTransform * trans, GstBuffer * inbuf,
+   return GST_FLOW_OK;
+ }
+ 
++static GstFlowReturn
++gst_hip_base_convert_generate_output (GstBaseTransform * trans,
++    GstBuffer ** buffer)
++{
++  auto self = GST_HIP_BASE_CONVERT (trans);
++  auto priv = self->priv;
++
++  if (!trans->queued_buf)
++    return GST_FLOW_OK;
++
++  if (!priv->same_caps || gst_buffer_get_video_crop_meta (trans->queued_buf)) {
++    return GST_BASE_TRANSFORM_CLASS (parent_class)->generate_output (trans,
++        buffer);
++  }
++
++  *buffer = trans->queued_buf;
++  trans->queued_buf = nullptr;
++
++  return GST_FLOW_OK;
++}
++
+ static void
+ gst_hip_base_convert_set_add_border (GstHipBaseConvert * self,
+     gboolean add_border)
