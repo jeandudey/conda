@@ -1,0 +1,82 @@
+schema_version: 1
+
+context:
+  version: "1.29.2.1"
+
+package:
+  name: gst-plugins-base
+  version: ${{ version }}
+
+source:
+  git: https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+  rev: 1cb8d4562d64d32dfe96fc79d59bd6dde10a8940
+
+build:
+  number: 0
+  script: build.sh
+  dynamic_linking:
+    missing_dso_allowlist:
+      - lib/libgst*-1.0.so.0
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - ${{ stdlib('c') }}
+    - freetype
+    - gettext-tools
+    - gobject-introspection
+    - meson
+    - ninja
+    - pkgconf
+    - python 3.14.* *_cp314
+    - setuptools
+  host:
+    - alsa-lib
+    - cairo
+    - expat
+    - glib
+    - gobject-introspection
+    - gstreamer ==${{ version }}
+    - harfbuzz <15
+    - libegl-devel
+    - libgl-devel
+    - libogg
+    - libopus
+    - libpng
+    - libdrm
+    - libvorbis
+    - libxcb
+    - pango
+    - python 3.14.* *_cp314
+    - xorg-libx11
+    - xorg-libxau
+    - xorg-libxdamage
+    - xorg-libxext
+    - xorg-libxfixes
+    - xorg-libxrender
+    - xorg-libxshmfence
+    - xorg-libxxf86vm
+    - xorg-xorgproto
+    - zlib
+  ignore_run_exports:
+    from_package:
+      - python
+  run:
+    - gstreamer ==${{ version }}
+  run_exports:
+    - ${{ pin_subpackage('gst-plugins-base', upper_bound='x.x') }}
+
+tests:
+  - script:
+      - test -f $PREFIX/lib/libgstvideo-1.0.so
+      - test -f $PREFIX/lib/girepository-1.0/GstVideo-1.0.typelib
+      - gst-inspect-1.0 --plugin volume
+      - gst-inspect-1.0 --plugin pango
+
+about:
+  summary: GStreamer Base Plug-ins
+  license: LGPL-2.0-or-later
+  license_file: subprojects/gst-plugins-base/COPYING
+  homepage: https://gstreamer.freedesktop.org/
+  repository: https://gitlab.freedesktop.org/gstreamer/gstreamer
